@@ -83,12 +83,13 @@ services:
     image: ghcr.io/open-webui/open-webui:ollama
     container_name: open-webui
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       # Configure Open WebUI with bundled Ollama
       WEBUI_AUTH: "True"  # Enable authentication
       WEBUI_NAME: "Open WebUI"
-      # OpenAI API key for external models (optional)
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      # OpenAI API key for external models (optional) - loaded from .env file
       # Ollama is bundled in this image, no external URL needed
     volumes:
       - ollama_data:/root/.ollama  # Ollama models and data
