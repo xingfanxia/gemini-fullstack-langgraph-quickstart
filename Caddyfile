@@ -1,0 +1,151 @@
+# Alternative Caddyfile using subdomains (recommended approach)
+
+# Global directives
+{
+    # Logging
+    log {
+        output file /var/log/caddy/access.log
+        format console
+    }
+}
+
+# Main landing page
+demos.computelabs.ai {
+    handle {
+        header Content-Type "text/html"
+        respond "
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Compute Labs Demos</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
+                .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                h1 { color: #333; text-align: center; }
+                .service { margin: 20px 0; padding: 15px; border-left: 4px solid #007acc; background: #f9f9f9; }
+                .service h3 { margin: 0 0 10px 0; color: #007acc; }
+                .service p { margin: 5px 0; color: #666; }
+                a { color: #007acc; text-decoration: none; }
+                a:hover { text-decoration: underline; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <h1>🚀 Compute Labs AI Demos</h1>
+                <p style='text-align: center; color: #666; margin-bottom: 30px;'>Explore our collection of AI services and tools</p>
+                
+                <div class='service'>
+                    <h3>🤖 LangGraph Agent</h3>
+                    <p>Interactive AI agent powered by Google Gemini with multi-step reasoning capabilities</p>
+                    <p><strong>Access:</strong> <a href='https://gs.demos.computelabs.ai/app/'>gs.demos.computelabs.ai/app/</a></p>
+                    <p><strong>API Docs:</strong> <a href='https://gs.demos.computelabs.ai/docs'>gs.demos.computelabs.ai/docs</a></p>
+                </div>
+                
+                <div class='service'>
+                    <h3>💬 Open WebUI + Ollama</h3>
+                    <p>Self-hosted ChatGPT-style interface with local Ollama models and OpenAI integration</p>
+                    <p><strong>Access:</strong> <a href='https://oui.demos.computelabs.ai'>oui.demos.computelabs.ai</a></p>
+                    <p><strong>Features:</strong> Local LLMs, Chat interface, Model management</p>
+                </div>
+                
+                <div class='service'>
+                    <h3>🔧 Dify Platform</h3>
+                    <p>Complete LLMOps platform for building and deploying AI applications</p>
+                    <p><strong>Web Interface:</strong> <a href='https://dify.demos.computelabs.ai'>dify.demos.computelabs.ai</a></p>
+                    <p><strong>API Endpoint:</strong> <a href='https://api.dify.demos.computelabs.ai'>api.dify.demos.computelabs.ai</a></p>
+                </div>
+                
+                <div style='text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #888;'>
+                    <p>All services are running on secure HTTPS with automatic SSL certificates</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        " 200
+    }
+    
+    # Enable compression and security headers
+    encode gzip
+    header {
+        Strict-Transport-Security max-age=31536000;
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy strict-origin-when-cross-origin
+    }
+}
+
+# LangGraph service on subdomain
+gs.demos.computelabs.ai {
+    # Handle redirect for /app
+    handle /app {
+        redir /app/ 301
+    }
+    
+    # Forward all requests to LangGraph API
+    reverse_proxy langgraph-api:8000 {
+        header_up Host {upstream_hostport}
+        header_up X-Forwarded-Host {host}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+    }
+    
+    # Enable compression and security headers
+    encode gzip
+    header {
+        Strict-Transport-Security max-age=31536000;
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy strict-origin-when-cross-origin
+    }
+}
+
+# Dify web interface on subdomain
+dify.demos.computelabs.ai {
+    # Forward all requests to Dify web service
+    reverse_proxy docker-web-1:3000 {
+        header_up Host {upstream_hostport}
+        header_up X-Forwarded-Host {host}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+    }
+    
+    # Enable compression and security headers
+    encode gzip
+    header {
+        Strict-Transport-Security max-age=31536000;
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy strict-origin-when-cross-origin
+    }
+}
+
+# Dify API on subdomain
+api.dify.demos.computelabs.ai {
+    # Forward all requests to Dify API service
+    reverse_proxy docker-api-1:5001 {
+        header_up Host {upstream_hostport}
+        header_up X-Forwarded-Host {host}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+    }
+    
+    # Enable compression and security headers
+    encode gzip
+    header {
+        Strict-Transport-Security max-age=31536000;
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy strict-origin-when-cross-origin
+    }
+}
+
+# Open WebUI
+oui.demos.computelabs.ai {
+    reverse_proxy open-webui:8080 {
+        header_up Host {upstream_hostport}
+        header_up X-Forwarded-Host {host}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+

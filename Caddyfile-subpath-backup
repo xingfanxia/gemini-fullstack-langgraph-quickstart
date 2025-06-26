@@ -1,0 +1,178 @@
+# Caddyfile for demos.computelabs.ai/gs
+demos.computelabs.ai {
+    # Enable automatic HTTPS with Let's Encrypt
+    # Caddy will automatically obtain and renew SSL certificates
+    
+    # Handle the GS application under /gs path
+    handle /gs {
+        redir /gs/app/ 301
+    }
+    
+    handle /gs/app/* {
+        # Strip /gs prefix and forward to backend
+        uri strip_prefix /gs
+        reverse_proxy langgraph-api:8000 {
+            header_up Host {http.request.host}
+            header_up X-Real-IP {http.request.remote}
+            header_up X-Forwarded-For {http.request.remote}
+            header_up X-Forwarded-Proto {http.request.scheme}
+            header_up X-Forwarded-Prefix /gs
+        }
+    }
+    
+    # Handle API routes under /gs prefix (LangGraph API endpoints)
+    handle /gs/runs* {
+        uri strip_prefix /gs
+        reverse_proxy langgraph-api:8000 {
+            header_up Host {http.request.host}
+            header_up X-Real-IP {http.request.remote}
+            header_up X-Forwarded-For {http.request.remote}
+            header_up X-Forwarded-Proto {http.request.scheme}
+            header_up X-Forwarded-Prefix /gs
+        }
+    }
+    
+    handle /gs/threads* {
+        uri strip_prefix /gs
+        reverse_proxy langgraph-api:8000 {
+            header_up Host {http.request.host}
+            header_up X-Real-IP {http.request.remote}
+            header_up X-Forwarded-For {http.request.remote}
+            header_up X-Forwarded-Proto {http.request.scheme}
+            header_up X-Forwarded-Prefix /gs
+        }
+    }
+    
+    handle /gs/assistants* {
+        uri strip_prefix /gs
+        reverse_proxy langgraph-api:8000 {
+            header_up Host {http.request.host}
+            header_up X-Real-IP {http.request.remote}
+            header_up X-Forwarded-For {http.request.remote}
+            header_up X-Forwarded-Proto {http.request.scheme}
+            header_up X-Forwarded-Prefix /gs
+        }
+    }
+    
+    handle /gs/crons* {
+        uri strip_prefix /gs
+        reverse_proxy langgraph-api:8000 {
+            header_up Host {http.request.host}
+            header_up X-Real-IP {http.request.remote}
+            header_up X-Forwarded-For {http.request.remote}
+            header_up X-Forwarded-Proto {http.request.scheme}
+            header_up X-Forwarded-Prefix /gs
+        }
+    }
+    
+    handle /gs/store* {
+        uri strip_prefix /gs
+        reverse_proxy langgraph-api:8000 {
+            header_up Host {http.request.host}
+            header_up X-Real-IP {http.request.remote}
+            header_up X-Forwarded-For {http.request.remote}
+            header_up X-Forwarded-Proto {http.request.scheme}
+            header_up X-Forwarded-Prefix /gs
+        }
+    }
+    
+    handle /gs/docs* {
+        uri strip_prefix /gs
+        reverse_proxy langgraph-api:8000 {
+            header_up Host {http.request.host}
+            header_up X-Real-IP {http.request.remote}
+            header_up X-Forwarded-For {http.request.remote}
+            header_up X-Forwarded-Proto {http.request.scheme}
+            header_up X-Forwarded-Prefix /gs
+        }
+    }
+    
+    handle /gs/redoc* {
+        uri strip_prefix /gs
+        reverse_proxy langgraph-api:8000 {
+            header_up Host {http.request.host}
+            header_up X-Real-IP {http.request.remote}
+            header_up X-Forwarded-For {http.request.remote}
+            header_up X-Forwarded-Proto {http.request.scheme}
+            header_up X-Forwarded-Prefix /gs
+        }
+    }
+    
+    handle /gs/openapi.json {
+        uri strip_prefix /gs
+        reverse_proxy langgraph-api:8000 {
+            header_up Host {http.request.host}
+            header_up X-Real-IP {http.request.remote}
+            header_up X-Forwarded-For {http.request.remote}
+            header_up X-Forwarded-Proto {http.request.scheme}
+            header_up X-Forwarded-Prefix /gs
+        }
+    }
+    
+    # Handle Dify application under /dify path
+    handle /dify {
+        redir /dify/ 301
+    }
+    
+    # Handle Dify Next.js static assets under /dify prefix
+    handle /dify/_next/* {
+        # Strip /dify prefix and forward to Dify web service
+        uri strip_prefix /dify
+        reverse_proxy docker-web-1:3000 {
+            header_up Host {http.request.host}
+            header_up X-Real-IP {http.request.remote}
+            header_up X-Forwarded-For {http.request.remote}
+            header_up X-Forwarded-Proto {http.request.scheme}
+        }
+    }
+    
+    handle /dify/* {
+        # Strip /dify prefix and forward to Dify web service
+        uri strip_prefix /dify
+        reverse_proxy docker-web-1:3000 {
+            header_up Host {http.request.host}
+            header_up X-Real-IP {http.request.remote}
+            header_up X-Forwarded-For {http.request.remote}
+            header_up X-Forwarded-Proto {http.request.scheme}
+            header_up X-Forwarded-Prefix /dify
+        }
+        # Rewrite HTML to fix asset paths for subpath deployment
+        replace {
+            re `="/_next/`
+            to `="/dify/_next/`
+        }
+    }
+    
+    # Handle Dify API routes under /dify-api prefix
+    handle /dify-api/* {
+        uri strip_prefix /dify-api
+        reverse_proxy docker-api-1:5001 {
+            header_up Host {http.request.host}
+            header_up X-Real-IP {http.request.remote}
+            header_up X-Forwarded-For {http.request.remote}
+            header_up X-Forwarded-Proto {http.request.scheme}
+            header_up X-Forwarded-Prefix /dify-api
+        }
+    }
+    
+    # Enable compression for better performance
+    encode gzip
+    
+    # Add security headers
+    header {
+        # Enable HSTS
+        Strict-Transport-Security max-age=31536000;
+        # Prevent MIME type sniffing
+        X-Content-Type-Options nosniff
+        # Enable XSS protection
+        X-Frame-Options DENY
+        # Referrer policy
+        Referrer-Policy strict-origin-when-cross-origin
+    }
+    
+    # Logging
+    log {
+        output file /var/log/caddy/access.log
+        format console
+    }
+} 

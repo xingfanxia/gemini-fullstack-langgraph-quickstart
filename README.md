@@ -117,4 +117,329 @@ Open your browser and navigate to `http://localhost:8123/app/` to see the applic
 
 ## License
 
-This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file for details. 
+This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file for details.
+
+# LangGraph + Dify Deployment
+
+This repository contains a clean deployment setup for running both LangGraph and Dify services under a single domain with path-based routing.
+
+## Architecture
+
+```
+demos.computelabs.ai                  → Landing page
+├── gs.demos.computelabs.ai          → LangGraph API (port 8000)
+├── dify.demos.computelabs.ai        → Dify Web Interface (port 3000)
+└── api.dify.demos.computelabs.ai    → Dify API (port 5001)
+```
+
+**Services:**
+- **Dify**: Runs independently using the official Docker Compose stack
+- **LangGraph**: Runs with its own Redis and PostgreSQL
+- **Caddy**: Single reverse proxy routing traffic to both services
+
+## Quick Start
+
+1. **Clone repositories:**
+   ```bash
+   # Make sure you have both repositories
+   git clone https://github.com/langgenius/dify.git
+   git clone <this-repository>
+   ```
+
+2. **Start all services:**
+   ```bash
+   cd gemini-fullstack-langgraph-quickstart
+   ./deploy.sh start
+   ```
+
+3. **Access services:**
+   - **Main site**: https://demos.computelabs.ai
+   - **LangGraph**: https://gs.demos.computelabs.ai
+   - **Dify**: https://dify.demos.computelabs.ai
+
+## Management Commands
+
+```bash
+# Start everything
+./deploy.sh start
+
+# Stop everything
+./deploy.sh stop
+
+# Restart everything
+./deploy.sh restart
+
+# Check status
+./deploy.sh status
+
+# View logs
+./deploy.sh logs [service-name]
+
+# Manage individual stacks
+./deploy.sh dify start/stop/restart/logs
+./deploy.sh langgraph start/stop/restart/logs
+
+# Check prerequisites
+./deploy.sh check
+```
+
+## Configuration
+
+### LangGraph Configuration
+Environment variables in `.env`:
+```bash
+GEMINI_API_KEY=your_key_here
+LANGSMITH_API_KEY=your_key_here
+```
+
+### Dify Configuration
+Dify is configured via `../dify/docker/.env`. The deployment script automatically sets the correct URLs for your domain.
+
+Key settings:
+```bash
+CONSOLE_API_URL=https://api.dify.demos.computelabs.ai
+CONSOLE_WEB_URL=https://dify.demos.computelabs.ai
+SERVICE_API_URL=https://api.dify.demos.computelabs.ai
+APP_API_URL=https://api.dify.demos.computelabs.ai
+APP_WEB_URL=https://dify.demos.computelabs.ai
+```
+
+## Network Setup
+
+- **Dify**: Uses its own `dify_default` network
+- **LangGraph**: Uses its own `default` network
+- **Caddy**: Connects to both networks to route traffic
+
+## File Structure
+
+```
+gemini-fullstack-langgraph-quickstart/
+├── docker-compose.yml    # LangGraph + Caddy services
+├── Caddyfile            # Reverse proxy configuration
+├── deploy.sh            # Deployment management script
+├── .env                 # LangGraph environment variables
+└── README.md            # This file
+
+../dify/docker/
+├── docker-compose.yaml  # Official Dify stack
+└── .env                 # Dify configuration
+```
+
+## Benefits of This Setup
+
+1. **Clean Separation**: Each service runs independently
+2. **Official Support**: Uses official Dify Docker Compose without modifications
+3. **Easy Management**: Single script to manage both stacks
+4. **Clean URLs**: All services accessible via clean subdomains
+5. **Maintainable**: Easy to update either service independently
+
+## Troubleshooting
+
+1. **Check prerequisites:**
+   ```bash
+   ./deploy.sh check
+   ```
+
+2. **View service status:**
+   ```bash
+   ./deploy.sh status
+   ```
+
+3. **Check logs:**
+   ```bash
+   ./deploy.sh logs caddy        # Caddy routing logs
+   ./deploy.sh logs langgraph-api # LangGraph API logs
+   ./deploy.sh dify logs api     # Dify API logs
+   ```
+
+4. **Restart individual services:**
+   ```bash
+   ./deploy.sh dify restart
+   ./deploy.sh langgraph restart
+   ```
+
+# Multi-Service AI Platform
+
+A comprehensive deployment of multiple AI services behind a single Caddy reverse proxy, featuring LangGraph agents, Open WebUI with Ollama, and the Dify platform.
+
+## 🚀 Services Included
+
+- **🤖 LangGraph Agent**: Interactive AI agent powered by Google Gemini
+- **💬 Open WebUI + Ollama**: Self-hosted ChatGPT-style interface with local models
+- **🔧 Dify Platform**: Complete LLMOps platform for AI applications
+- **🌐 Caddy Reverse Proxy**: Automatic HTTPS and subdomain routing
+
+## 🌍 Live Services
+
+- **Main Portal**: [https://demos.computelabs.ai](https://demos.computelabs.ai)
+- **LangGraph**: [https://gs.demos.computelabs.ai/app/](https://gs.demos.computelabs.ai/app/)
+- **Open WebUI**: [https://oui.demos.computelabs.ai](https://oui.demos.computelabs.ai)
+- **Dify Web**: [https://dify.demos.computelabs.ai](https://dify.demos.computelabs.ai)
+- **Dify API**: [https://api.dify.demos.computelabs.ai](https://api.dify.demos.computelabs.ai)
+
+## 📚 Documentation
+
+- **[Multi-Service Deployment Guide](./MULTI_SERVICE_DEPLOYMENT.md)** - Comprehensive guide on the architecture
+- **[Network Topology](./NETWORK_DIAGRAM.md)** - Visual network architecture overview
+- **[Deployment Script](./deploy.sh)** - Management script for all services
+
+## 🏗️ Architecture Overview
+
+This deployment uses a sophisticated multi-Docker Compose architecture:
+
+```
+Internet → Cloudflare DNS → Caddy Reverse Proxy
+                               ├── LangGraph Services (default network)
+                               ├── Open WebUI + Ollama (default network)  
+                               └── Dify Services (docker_default network)
+```
+
+### Key Features
+
+- **Service Isolation**: Each service stack runs independently
+- **Single Entry Point**: All traffic routed through Caddy
+- **Automatic HTTPS**: Let's Encrypt certificates for all domains
+- **Cross-Network Communication**: Services can communicate across Docker networks
+- **Independent Management**: Each service can be managed separately
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Docker and Docker Compose installed
+- Domain with DNS pointing to your server
+- Cloudflare DNS configuration
+
+### Deployment
+
+```bash
+# Clone and setup
+git clone <repository>
+cd gemini-fullstack-langgraph-quickstart
+
+# Start all services
+sudo ./deploy.sh start
+
+# Check status
+sudo ./deploy.sh status
+```
+
+## 🛠️ Management Commands
+
+```bash
+# Start all services
+sudo ./deploy.sh start
+
+# Start specific service
+sudo ./deploy.sh start langgraph
+sudo ./deploy.sh start dify
+
+# Stop services
+sudo ./deploy.sh stop
+
+# Restart services
+sudo ./deploy.sh restart
+sudo ./deploy.sh restart caddy
+sudo ./deploy.sh restart open-webui
+
+# View logs
+sudo ./deploy.sh logs
+sudo ./deploy.sh logs caddy
+sudo ./deploy.sh logs open-webui
+
+# Check status
+sudo ./deploy.sh status
+```
+
+## 🔧 Configuration
+
+### Environment Variables
+
+Create a `.env` file with:
+
+```bash
+# OpenAI API Key for Open WebUI
+OPENAI_API_KEY=your_openai_api_key_here
+
+# Gemini API Key for LangGraph
+GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+### DNS Configuration
+
+Add these A records in Cloudflare:
+
+| Record | Value |
+|--------|-------|
+| demos.computelabs.ai | 35.193.136.64 |
+| gs.demos.computelabs.ai | 35.193.136.64 |
+| oui.demos.computelabs.ai | 35.193.136.64 |
+| dify.demos.computelabs.ai | 35.193.136.64 |
+| api.dify.demos.computelabs.ai | 35.193.136.64 |
+
+## 🐳 Docker Architecture
+
+### Service Distribution
+
+| Service | Location | Network | Container |
+|---------|----------|---------|-----------|
+| Caddy | LangGraph stack | default + docker_default | caddy |
+| LangGraph API | LangGraph stack | default | langgraph-api |
+| Open WebUI | LangGraph stack | default | open-webui |
+| Dify Web | Dify stack | docker_default | docker-web-1 |
+| Dify API | Dify stack | docker_default | docker-api-1 |
+
+### Network Communication
+
+- **Same Network**: Caddy → LangGraph/Open WebUI (container names)
+- **Cross Network**: Caddy → Dify services (external links)
+
+## 🔍 Troubleshooting
+
+### Common Issues
+
+1. **Network connectivity**: Ensure Dify stack is started first to create `docker_default` network
+2. **SSL certificates**: Check DNS resolution and Caddy logs
+3. **Service discovery**: Verify container names and network connections
+
+### Debug Commands
+
+```bash
+# Check networks
+sudo docker network ls
+
+# Test connectivity
+sudo docker exec caddy ping langgraph-api
+sudo docker exec caddy ping docker-web-1
+
+# View logs
+sudo docker logs caddy
+sudo ./deploy.sh logs open-webui
+```
+
+## 📖 Technical Details
+
+For detailed technical information, see:
+
+- **[Multi-Service Deployment Guide](./MULTI_SERVICE_DEPLOYMENT.md)** - Complete architecture documentation
+- **[Network Topology](./NETWORK_DIAGRAM.md)** - Network design and routing
+- **[Caddyfile](./Caddyfile)** - Reverse proxy configuration
+- **[Docker Compose](./docker-compose.yml)** - Service definitions
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test the deployment
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+---
+
+**Architecture**: Multi-Docker Compose with Caddy Reverse Proxy  
+**Services**: LangGraph + Open WebUI + Dify Platform  
+**Deployment**: Production-ready with automatic HTTPS

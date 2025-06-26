@@ -1,44 +1,108 @@
 volumes:
   langgraph-data:
     driver: local
+  caddy-data:
+    driver: local
+  caddy-config:
+    driver: local
+  langgraph_redis_data:
+  langgraph_postgres_data:
+  ollama_data:  # Ollama models and configuration
+  open_webui_data:  # Open WebUI data
+
 services:
   langgraph-redis:
-    image: docker.io/redis:6
+    image: redis:7
     container_name: langgraph-redis
+    restart: unless-stopped
+    volumes:
+      - langgraph_redis_data:/data
     healthcheck:
-      test: redis-cli ping
-      interval: 5s
-      timeout: 1s
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
       retries: 5
+
   langgraph-postgres:
-    image: docker.io/postgres:16
+    image: postgres:16
     container_name: langgraph-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: langgraph
+      POSTGRES_USER: langgraph
+      POSTGRES_PASSWORD: langgraph
+    volumes:
+      - langgraph_postgres_data:/var/lib/postgresql/data
     ports:
       - "5433:5432"
-    environment:
-      POSTGRES_DB: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    volumes:
-      - langgraph-data:/var/lib/postgresql/data
     healthcheck:
-      test: pg_isready -U postgres
-      start_period: 10s
-      timeout: 1s
+      test: ["CMD-SHELL", "pg_isready -U langgraph"]
+      interval: 10s
+      timeout: 5s
       retries: 5
-      interval: 5s
+
   langgraph-api:
     image: gemini-fullstack-langgraph
     container_name: langgraph-api
-    ports:
-      - "8123:8000"
+    restart: unless-stopped
+    environment:
+      REDIS_URL: redis://langgraph-redis:6379
+      POSTGRES_URL: postgresql://langgraph:langgraph@langgraph-postgres:5432/langgraph
     depends_on:
       langgraph-redis:
         condition: service_healthy
       langgraph-postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - $PWD/Caddyfile:/etc/caddy/Caddyfile
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - default
+      - docker_default
+    external_links:
+      - docker-web-1
+      - docker-api-1
+
+  # Open WebUI Service with Bundled Ollama
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:ollama
+    container_name: open-webui
+    restart: unless-stopped
     environment:
-      GEMINI_API_KEY: ${GEMINI_API_KEY}
-      LANGSMITH_API_KEY: ${LANGSMITH_API_KEY}
-      REDIS_URI: redis://langgraph-redis:6379
-      POSTGRES_URI: postgres://postgres:postgres@langgraph-postgres:5432/postgres?sslmode=disable
+      # Configure Open WebUI with bundled Ollama
+      WEBUI_AUTH: "True"  # Enable authentication
+      WEBUI_NAME: "Open WebUI"
+      # OpenAI API key for external models (optional)
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      # Ollama is bundled in this image, no external URL needed
+    volumes:
+      - ollama_data:/root/.ollama  # Ollama models and data
+      - open_webui_data:/app/backend/data  # Open WebUI data
+    # Port 8080 is the internal port for Open WebUI
+    # We'll access it through Caddy reverse proxy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  default:
+    driver: bridge
+  docker_default:
+    external: true

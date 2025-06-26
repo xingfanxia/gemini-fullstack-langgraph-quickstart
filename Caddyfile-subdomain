@@ -1,0 +1,93 @@
+# Alternative Caddyfile using subdomains (recommended approach)
+
+# Main LangGraph service
+demos.computelabs.ai {
+    # Handle the GS application under /gs path
+    handle /gs {
+        redir /gs/app/ 301
+    }
+    
+    handle /gs/app/* {
+        # Strip /gs prefix and forward to backend
+        uri strip_prefix /gs
+        reverse_proxy langgraph-api:8000 {
+            header_up Host {http.request.host}
+            header_up X-Real-IP {http.request.remote}
+            header_up X-Forwarded-For {http.request.remote}
+            header_up X-Forwarded-Proto {http.request.scheme}
+            header_up X-Forwarded-Prefix /gs
+        }
+    }
+    
+    # Handle all other LangGraph API routes
+    handle /gs/* {
+        uri strip_prefix /gs
+        reverse_proxy langgraph-api:8000 {
+            header_up Host {http.request.host}
+            header_up X-Real-IP {http.request.remote}
+            header_up X-Forwarded-For {http.request.remote}
+            header_up X-Forwarded-Proto {http.request.scheme}
+            header_up X-Forwarded-Prefix /gs
+        }
+    }
+    
+    # Default handler for root
+    handle {
+        respond "Welcome to Demos! Visit /gs for LangGraph or https://dify.demos.computelabs.ai for Dify" 200
+    }
+    
+    # Enable compression and security headers
+    encode gzip
+    header {
+        Strict-Transport-Security max-age=31536000;
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy strict-origin-when-cross-origin
+    }
+}
+
+# Dify web interface on subdomain
+dify.demos.computelabs.ai {
+    # Forward all requests to Dify web service
+    reverse_proxy docker-web-1:3000 {
+        header_up Host {http.request.host}
+        header_up X-Real-IP {http.request.remote}
+        header_up X-Forwarded-For {http.request.remote}
+        header_up X-Forwarded-Proto {http.request.scheme}
+    }
+    
+    # Enable compression and security headers
+    encode gzip
+    header {
+        Strict-Transport-Security max-age=31536000;
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy strict-origin-when-cross-origin
+    }
+}
+
+# Dify API on subdomain
+api.dify.demos.computelabs.ai {
+    # Forward all requests to Dify API service
+    reverse_proxy docker-api-1:5001 {
+        header_up Host {http.request.host}
+        header_up X-Real-IP {http.request.remote}
+        header_up X-Forwarded-For {http.request.remote}
+        header_up X-Forwarded-Proto {http.request.scheme}
+    }
+    
+    # Enable compression and security headers
+    encode gzip
+    header {
+        Strict-Transport-Security max-age=31536000;
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy strict-origin-when-cross-origin
+    }
+}
+
+# Logging
+log {
+    output file /var/log/caddy/access.log
+    format console
+} 
